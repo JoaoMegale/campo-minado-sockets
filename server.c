@@ -34,9 +34,12 @@ int readMatrix(const char *filename, int matrix[ROWS][COLS]) {
     // readMatrix(arquivo, matriz);
 }
 
-void atualizaMatriz(int m_original[ROWS][COLS], int m_revealed[ROWS][COLS], int m_cliente[ROWS][COLS], int x, int y) {
+void revealCell(int m_original[ROWS][COLS], int m_cliente[ROWS][COLS], int x, int y) {
     m_cliente[x][y] = m_original[x][y];
-    m_revealed[x][y] = 1;
+}
+
+void addFlag(int m_cliente[ROWS][COLS], int x, int y) {
+    m_cliente[x][y] = -3;
 }
 
 int main(int argc, char *argv[]) {
@@ -99,14 +102,6 @@ int main(int argc, char *argv[]) {
     readMatrix(filename, base_matrix);
     printMatrix(base_matrix);
 
-    // matriz auxiliar (revealed)
-    int revealed_matrix[ROWS][COLS];
-    for (int i=0;i<ROWS;i++) {
-        for (int j=0;j<COLS;j++) {
-            revealed_matrix[i][j] = 0;
-        }
-    }
-
     // matriz mostrada ao cliente
     int client_matrix[ROWS][COLS];
     for (int i=0;i<ROWS;i++) {
@@ -142,28 +137,35 @@ int main(int argc, char *argv[]) {
             break;
         }
 
+        // start
         else if (client_msg.type == 0) {
-            printf("game started\n");
-        }
-
-        else if (client_msg.type == 1) {
-            //printf("celula revelada: %d,%d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
-            atualizaMatriz(base_matrix, revealed_matrix, client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
             server_resp.type = 3;
             for (int i = 0; i < 4; i++) {
                 for (int j = 0; j < 4; j++) {
                     server_resp.board[i][j] = client_matrix[i][j];
                 }
             }
-            if (send(client_socket, &server_resp, sizeof(struct Action), 0) == -1) {
-                perror("Erro ao enviar mensagem do servidor para o cliente");
-                exit(1);
+        }
+
+        // reveal
+        else if (client_msg.type == 1) {
+            revealCell(base_matrix, client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+            server_resp.type = 3;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    server_resp.board[i][j] = client_matrix[i][j];
+                }
             }
-            //printMatrix(client_matrix);
         }
 
         else if (client_msg.type == 2) {
-            printf("flag adicionada\n");
+            addFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+            server_resp.type = 3;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    server_resp.board[i][j] = client_matrix[i][j];
+                }
+            }
         }
 
         else if (client_msg.type == 4) {
@@ -183,8 +185,10 @@ int main(int argc, char *argv[]) {
             printf("comando desconhecido\n");
         }
 
-        //buffer[bytes_received] = '\0';
-        //printf("Mensagem recebida do cliente: %s received\n", buffer);
+        if (send(client_socket, &server_resp, sizeof(struct Action), 0) == -1) {
+            perror("Erro ao enviar mensagem do servidor para o cliente");
+            exit(1);
+        }        
     }
 
     close(client_socket);

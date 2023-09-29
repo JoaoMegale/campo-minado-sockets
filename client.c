@@ -6,6 +6,40 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
+int updateStatusReveal (int mstatus[ROWS][COLS], int x, int y) {
+    if (x<0 || y<0 || x>ROWS || y>COLS) {
+        printf("error: invalid cell\n");
+        return 0;
+    }
+    if (mstatus[x][y] == 1) {
+        printf("error: cell already revealed\n");
+        return 0; //erro
+    }
+    else {
+        mstatus[x][y] = 1;
+        return 1; //correto
+    }
+}
+
+int updateStatusAddFlag (int mstatus[ROWS][COLS], int x, int y) {
+    if (x<0 || y<0 || x>ROWS || y>COLS) {
+        printf("error: invalid cell\n");
+        return 0;
+    }
+    if (mstatus[x][y] == 1) {
+        printf("error: cannot insert flag in revealed cell\n");
+        return 0;
+    }
+    else if (mstatus[x][y] == -1) {
+        printf("error: cell already has a flag\n");
+        return 0;
+    }
+    else {
+        mstatus[x][y] = -1;
+        return 1;
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <IP> <porta>\n", argv[0]);
@@ -61,11 +95,24 @@ int main(int argc, char *argv[]) {
         printf("Conectado ao servidor IPv4 %s na porta %s\n", argv[1], argv[2]);
     }
 
+    /*  
+    matriz de status
+     0 = celula nao marcada
+     1 = celula revelada
+    -1 = celula com flag
+    */
+    int status_matrix[ROWS][COLS];
+    for (int i=0;i<ROWS;i++) {
+        for (int j=0;j<COLS;j++) {
+            status_matrix[i][j] = 0;
+        }
+    }
+
     struct Action client_msg;
     char client_input[1024];
-    int unknown_request; // comando desconhecido
+    int has_error; // comando desconhecido
     while (1) {
-        unknown_request = 0;
+        has_error = 0;
         printf("> ");
         fgets(client_input, sizeof(client_input), stdin);
 
@@ -76,18 +123,29 @@ int main(int argc, char *argv[]) {
         else if (strncmp(client_input, "reveal ", 7) == 0) {
             int x, y;
             if (sscanf(client_input + 7, "%d,%d", &x, &y) == 2) {
-                client_msg.type = 1;
-                client_msg.coordinates[0] = x;
-                client_msg.coordinates[1] = y;
+                if (updateStatusReveal(status_matrix, x, y) == 1) {
+                    client_msg.type = 1;
+                    client_msg.coordinates[0] = x;
+                    client_msg.coordinates[1] = y;                  
+                }
+                else {
+                    has_error = 1;
+                }
             }
         }
 
-        else if (strcmp(client_input, "flag\n") == 0) {
-            client_msg.type = 2;
-        }
-
-        else if (strcmp(client_input, "flag\n") == 0) {
-            client_msg.type = 2;
+        else if (strncmp(client_input, "flag ", 5) == 0) {
+            int x, y;
+            if (sscanf(client_input + 5, "%d,%d", &x, &y) == 2) {
+                if (updateStatusAddFlag(status_matrix, x, y) == 1) {
+                    client_msg.type = 2;
+                    client_msg.coordinates[0] = x;
+                    client_msg.coordinates[1] = y;
+                }
+                else {
+                    has_error = 1;
+                }
+            }
         }
 
         else if (strcmp(client_input, "remove_flag\n") == 0) {
@@ -104,11 +162,11 @@ int main(int argc, char *argv[]) {
         }
 
         else {
-            unknown_request = 1;
+            has_error = 1;
             printf("comando desconhecido\n");
         }
 
-        if (unknown_request == 0){
+        if (has_error == 0){
             ssize_t bytes_sent = send(client_socket, &client_msg, sizeof(client_msg), 0);
             if (bytes_sent == -1) {
                 perror("Erro ao enviar mensagem para o servidor");
@@ -117,18 +175,22 @@ int main(int argc, char *argv[]) {
         }
 
         struct Action server_msg;
-        ssize_t bytes_received = recv(client_socket, &server_msg, sizeof(server_msg), 0);
+        // se houver algum erro, o cliente nao espera nenhuma resposta do servidor
+        // e deve digitar um novo comando.
+        if (has_error == 0) {
 
-        if (bytes_received == -1) {
-            perror("Erro ao receber mensagem do servidor");
-            exit(1);
-        } else if (bytes_received == 0) {
-            printf("Conexão com o servidor encerrada\n");
-            break;
-        }
+            ssize_t bytes_received = recv(client_socket, &server_msg, sizeof(server_msg), 0);
+            if (bytes_received == -1) {
+                perror("Erro ao receber mensagem do servidor");
+                exit(1);
+            } else if (bytes_received == 0) {
+                printf("Conexão com o servidor encerrada\n");
+                break;
+            }
 
-        if (server_msg.type == 3) {
-            printMatrix(server_msg.board);
+            if (server_msg.type == 3) {
+                printMatrix(server_msg.board);
+            }
         }
     }
 
