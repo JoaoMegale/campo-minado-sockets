@@ -42,6 +42,18 @@ void addFlag(int m_cliente[ROWS][COLS], int x, int y) {
     m_cliente[x][y] = -3;
 }
 
+void removeFlag(int m_cliente[ROWS][COLS], int x, int y) {
+    m_cliente[x][y] = -2;
+}
+
+void reset(int m_cliente[ROWS][COLS]) {
+    for (int i=0;i<ROWS;i++) {
+        for (int j=0;j<COLS;j++) {
+            m_cliente[i][j] = -2;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 5) {
         fprintf(stderr, "Uso: %s <v4/v6> <porta> -i <arquivo>\n", argv[0]);
@@ -169,11 +181,23 @@ int main(int argc, char *argv[]) {
         }
 
         else if (client_msg.type == 4) {
-            printf("flag removida\n");
+            removeFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+            server_resp.type = 3;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    server_resp.board[i][j] = client_matrix[i][j];
+                }
+            }
         }
 
         else if (client_msg.type == 5) {
-            printf("jogo resetado\n");
+            reset(client_matrix);
+            server_resp.type = 3;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    server_resp.board[i][j] = client_matrix[i][j];
+                }
+            }
         }
 
         else if (client_msg.type == 7) {

@@ -40,6 +40,29 @@ int updateStatusAddFlag (int mstatus[ROWS][COLS], int x, int y) {
     }
 }
 
+int updateStatusRemoveFlag (int mstatus[ROWS][COLS], int x, int y) {
+    if (x<0 || y<0 || x>ROWS || y>COLS) {
+        printf("error: invalid cell\n");
+        return 0;
+    }
+    if (mstatus[x][y] != -1) {
+        printf("error: cell has no flag to remove\n");
+        return 0;
+    }
+    else {
+        mstatus[x][y] = 0;
+        return 1;
+    }
+}
+
+void updateStatusReset (int mstatus[ROWS][COLS]) {
+    for (int i=0;i<ROWS;i++) {
+        for (int j=0;j<COLS;j++) {
+            mstatus[i][j] = 0;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         fprintf(stderr, "Uso: %s <IP> <porta>\n", argv[0]);
@@ -110,7 +133,7 @@ int main(int argc, char *argv[]) {
 
     struct Action client_msg;
     char client_input[1024];
-    int has_error; // comando desconhecido
+    int has_error;
     while (1) {
         has_error = 0;
         printf("> ");
@@ -148,11 +171,22 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        else if (strcmp(client_input, "remove_flag\n") == 0) {
-            client_msg.type = 4;
+        else if (strncmp(client_input, "remove_flag ", 12) == 0) {
+            int x, y;
+            if (sscanf(client_input + 12, "%d,%d", &x, &y) == 2) {
+                if (updateStatusRemoveFlag(status_matrix, x, y) == 1) {
+                    client_msg.type = 4;
+                    client_msg.coordinates[0] = x;
+                    client_msg.coordinates[1] = y;
+                }
+                else {
+                    has_error = 1;
+                }
+            }
         }
 
         else if (strcmp(client_input, "reset\n") == 0) {
+            updateStatusReset(status_matrix);
             client_msg.type = 5;
         }
 
