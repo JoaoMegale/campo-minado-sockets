@@ -41,12 +41,26 @@ void printMatrix(int matrix[ROWS][COLS]) {
             if(matrix[i][j] == -1) {
                 printf("* ");
             }
-            else {
+            else if (matrix[i][j] == -2) {
+                printf("- ");
+            }
+            else if (matrix[i][j] == -3) {
+                printf("> ");
+            }
+            else if (matrix[i][j] >= 0) {
                 printf("%d ", matrix[i][j]);
+            }
+            else {
+                printf("valor inválido na matriz.\n");
             }               
         }
         printf("\n");
     }
+}
+
+void atualizaMatriz(int m_original[ROWS][COLS], int m_revealed[ROWS][COLS], int m_cliente[ROWS][COLS], int x, int y) {
+    m_cliente[x][y] = m_original[x][y];
+    m_revealed[x][y] = 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -105,15 +119,23 @@ int main(int argc, char *argv[]) {
 
     // matriz de jogo
     const char *filename = argv[4];
-    int matriz_base[ROWS][COLS];
-    readMatrix(filename, matriz_base);
-    printMatrix(matriz_base);
+    int base_matrix[ROWS][COLS];
+    readMatrix(filename, base_matrix);
+    printMatrix(base_matrix);
 
     // matriz auxiliar (revealed)
-    int matriz_revealed[ROWS][COLS];
+    int revealed_matrix[ROWS][COLS];
     for (int i=0;i<ROWS;i++) {
         for (int j=0;j<COLS;j++) {
-            matriz_revealed[i][j] = 0;
+            revealed_matrix[i][j] = 0;
+        }
+    }
+
+    // matriz mostrada ao cliente
+    int client_matrix[ROWS][COLS];
+    for (int i=0;i<ROWS;i++) {
+        for (int j=0;j<COLS;j++) {
+            client_matrix[i][j] = -2;
         }
     }
 
@@ -148,7 +170,9 @@ int main(int argc, char *argv[]) {
         }
 
         else if (client_msg.type == 1) {
-            printf("celula revelada: %d, %d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
+            printf("celula revelada: %d,%d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
+            atualizaMatriz(base_matrix, revealed_matrix, client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+            printMatrix(client_matrix);
         }
 
         else if (client_msg.type == 2) {
