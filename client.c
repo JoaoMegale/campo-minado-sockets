@@ -73,8 +73,13 @@ int main(int argc, char *argv[]) {
             client_msg.type = 0;
         }
 
-        else if (strcmp(client_input, "reveal\n") == 0) {
-            client_msg.type = 1;
+        else if (strncmp(client_input, "reveal ", 7) == 0) {
+            int x, y;
+            if (sscanf(client_input + 7, "%d,%d", &x, &y) == 2) {
+                client_msg.type = 1;
+                client_msg.coordinates[0] = x;
+                client_msg.coordinates[1] = y;
+            }
         }
 
         else if (strcmp(client_input, "flag\n") == 0) {

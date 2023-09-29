@@ -103,11 +103,19 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    // matriz
+    // matriz de jogo
     const char *filename = argv[4];
-    int matrizBase[ROWS][COLS];
-    readMatrix(filename, matrizBase);
-    printMatrix(matrizBase);
+    int matriz_base[ROWS][COLS];
+    readMatrix(filename, matriz_base);
+    printMatrix(matriz_base);
+
+    // matriz auxiliar (revealed)
+    int matriz_revealed[ROWS][COLS];
+    for (int i=0;i<ROWS;i++) {
+        for (int j=0;j<COLS;j++) {
+            matriz_revealed[i][j] = 0;
+        }
+    }
 
     struct sockaddr_in6 client_addr;
     socklen_t client_len = sizeof(client_addr);
@@ -140,7 +148,7 @@ int main(int argc, char *argv[]) {
         }
 
         else if (client_msg.type == 1) {
-            printf("celula revelada\n");
+            printf("celula revelada: %d, %d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
         }
 
         else if (client_msg.type == 2) {
