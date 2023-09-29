@@ -34,30 +34,6 @@ int readMatrix(const char *filename, int matrix[ROWS][COLS]) {
     // readMatrix(arquivo, matriz);
 }
 
-// Função para imprimir a matriz
-void printMatrix(int matrix[ROWS][COLS]) {
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLS; j++) {
-            if(matrix[i][j] == -1) {
-                printf("* ");
-            }
-            else if (matrix[i][j] == -2) {
-                printf("- ");
-            }
-            else if (matrix[i][j] == -3) {
-                printf("> ");
-            }
-            else if (matrix[i][j] >= 0) {
-                printf("%d ", matrix[i][j]);
-            }
-            else {
-                printf("valor inválido na matriz.\n");
-            }               
-        }
-        printf("\n");
-    }
-}
-
 void atualizaMatriz(int m_original[ROWS][COLS], int m_revealed[ROWS][COLS], int m_cliente[ROWS][COLS], int x, int y) {
     m_cliente[x][y] = m_original[x][y];
     m_revealed[x][y] = 1;
@@ -152,6 +128,7 @@ int main(int argc, char *argv[]) {
     printf("client connected\n");
 
     struct Action client_msg;
+    struct Action server_resp;
     while (1) {
         ssize_t bytes_received = recv(client_socket, &client_msg, sizeof(client_msg), 0);
 
@@ -170,9 +147,19 @@ int main(int argc, char *argv[]) {
         }
 
         else if (client_msg.type == 1) {
-            printf("celula revelada: %d,%d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
+            //printf("celula revelada: %d,%d\n", client_msg.coordinates[0], client_msg.coordinates[1]);
             atualizaMatriz(base_matrix, revealed_matrix, client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
-            printMatrix(client_matrix);
+            server_resp.type = 3;
+            for (int i = 0; i < 4; i++) {
+                for (int j = 0; j < 4; j++) {
+                    server_resp.board[i][j] = client_matrix[i][j];
+                }
+            }
+            if (send(client_socket, &server_resp, sizeof(struct Action), 0) == -1) {
+                perror("Erro ao enviar mensagem do servidor para o cliente");
+                exit(1);
+            }
+            //printMatrix(client_matrix);
         }
 
         else if (client_msg.type == 2) {

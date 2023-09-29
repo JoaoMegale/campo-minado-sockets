@@ -115,6 +115,21 @@ int main(int argc, char *argv[]) {
                 exit(1);
             }
         }
+
+        struct Action server_msg;
+        ssize_t bytes_received = recv(client_socket, &server_msg, sizeof(server_msg), 0);
+
+        if (bytes_received == -1) {
+            perror("Erro ao receber mensagem do servidor");
+            exit(1);
+        } else if (bytes_received == 0) {
+            printf("Conexão com o servidor encerrada\n");
+            break;
+        }
+
+        if (server_msg.type == 3) {
+            printMatrix(server_msg.board);
+        }
     }
 
     close(client_socket);
