@@ -225,6 +225,18 @@ int main(int argc, char *argv[]) {
             if (server_msg.type == 3) {
                 printMatrix(server_msg.board);
             }
+
+            if (server_msg.type == 6) {
+                printf("YOU WIN!\n");
+                printMatrix(server_msg.board);
+                break;
+            }
+
+            if (server_msg.type == 8) {
+                printf("GAME OVER!\n");
+                printMatrix(server_msg.board);
+                break;
+            }
         }
     }
 

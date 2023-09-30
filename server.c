@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
 
     struct Action client_msg;
     struct Action server_resp;
+    int reveal_count = 0;
     while (1) {
         ssize_t bytes_received = recv(client_socket, &client_msg, sizeof(client_msg), 0);
 
@@ -161,15 +162,37 @@ int main(int argc, char *argv[]) {
 
         // reveal
         else if (client_msg.type == 1) {
-            revealCell(base_matrix, client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
-            server_resp.type = 3;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    server_resp.board[i][j] = client_matrix[i][j];
+            reveal_count++;
+            int x = client_msg.coordinates[0];
+            int y = client_msg.coordinates[1];
+            if (base_matrix[x][y] == -1) {
+                server_resp.type = 8;
+                for (int i=0; i<ROWS; i++) {
+                    for (int j=0; j<COLS; j++) {
+                        server_resp.board[i][j] = base_matrix[i][j];
+                    }
+                }
+            }
+            else if (reveal_count == 13) {
+                server_resp.type = 6;
+                for (int i=0; i<ROWS; i++) {
+                    for (int j=0; j<COLS; j++) {
+                        server_resp.board[i][j] = base_matrix[i][j];
+                    }
+                }
+            }
+            else {
+                revealCell(base_matrix, client_matrix, x, y);
+                server_resp.type = 3;
+                for (int i = 0; i<ROWS; i++) {
+                    for (int j = 0; j<COLS; j++) {
+                        server_resp.board[i][j] = client_matrix[i][j];
+                    }
                 }
             }
         }
 
+        // flag
         else if (client_msg.type == 2) {
             addFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
             server_resp.type = 3;
@@ -180,6 +203,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // remove_flag
         else if (client_msg.type == 4) {
             removeFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
             server_resp.type = 3;
@@ -190,6 +214,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // reset
         else if (client_msg.type == 5) {
             reset(client_matrix);
             server_resp.type = 3;
@@ -200,6 +225,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // exit
         else if (client_msg.type == 7) {
             printf("client disconnected\n");
             break;
