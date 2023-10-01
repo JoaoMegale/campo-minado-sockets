@@ -1,4 +1,4 @@
-#include "common.c"
+#include "common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,49 +9,45 @@
 int updateStatusReveal (int mstatus[ROWS][COLS], int x, int y) {
     if (x<0 || y<0 || x>ROWS || y>COLS) {
         printf("error: invalid cell\n");
-        return 0;
+        return 1;
     }
     if (mstatus[x][y] == 1) {
         printf("error: cell already revealed\n");
-        return 0; //erro
+        return 1; //erro
     }
     else {
         mstatus[x][y] = 1;
-        return 1; //correto
+        return 0; //correto
     }
 }
 
 int updateStatusAddFlag (int mstatus[ROWS][COLS], int x, int y) {
     if (x<0 || y<0 || x>ROWS || y>COLS) {
         printf("error: invalid cell\n");
-        return 0;
+        return 1;
     }
     if (mstatus[x][y] == 1) {
         printf("error: cannot insert flag in revealed cell\n");
-        return 0;
+        return 1;
     }
     else if (mstatus[x][y] == -1) {
         printf("error: cell already has a flag\n");
-        return 0;
+        return 1;
     }
     else {
         mstatus[x][y] = -1;
-        return 1;
+        return 0;
     }
 }
 
 int updateStatusRemoveFlag (int mstatus[ROWS][COLS], int x, int y) {
     if (x<0 || y<0 || x>ROWS || y>COLS) {
         printf("error: invalid cell\n");
-        return 0;
-    }
-    if (mstatus[x][y] != -1) {
-        printf("error: cell has no flag to remove\n");
-        return 0;
+        return 1;
     }
     else {
         mstatus[x][y] = 0;
-        return 1;
+        return 0;
     }
 }
 
@@ -112,12 +108,6 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    if (strchr(argv[1], ':') != NULL) {
-        printf("Conectado ao servidor IPv6 %s na porta %s\n", argv[1], argv[2]);
-    } else {
-        printf("Conectado ao servidor IPv4 %s na porta %s\n", argv[1], argv[2]);
-    }
-
     /*  
     matriz de status
      0 = celula nao marcada
@@ -146,7 +136,7 @@ int main(int argc, char *argv[]) {
         else if (strncmp(client_input, "reveal ", 7) == 0) {
             int x, y;
             if (sscanf(client_input + 7, "%d,%d", &x, &y) == 2) {
-                if (updateStatusReveal(status_matrix, x, y) == 1) {
+                if (updateStatusReveal(status_matrix, x, y) == 0) {
                     client_msg.type = 1;
                     client_msg.coordinates[0] = x;
                     client_msg.coordinates[1] = y;                  
@@ -160,7 +150,7 @@ int main(int argc, char *argv[]) {
         else if (strncmp(client_input, "flag ", 5) == 0) {
             int x, y;
             if (sscanf(client_input + 5, "%d,%d", &x, &y) == 2) {
-                if (updateStatusAddFlag(status_matrix, x, y) == 1) {
+                if (updateStatusAddFlag(status_matrix, x, y) == 0) {
                     client_msg.type = 2;
                     client_msg.coordinates[0] = x;
                     client_msg.coordinates[1] = y;
@@ -174,7 +164,7 @@ int main(int argc, char *argv[]) {
         else if (strncmp(client_input, "remove_flag ", 12) == 0) {
             int x, y;
             if (sscanf(client_input + 12, "%d,%d", &x, &y) == 2) {
-                if (updateStatusRemoveFlag(status_matrix, x, y) == 1) {
+                if (updateStatusRemoveFlag(status_matrix, x, y) == 0) {
                     client_msg.type = 4;
                     client_msg.coordinates[0] = x;
                     client_msg.coordinates[1] = y;
@@ -191,6 +181,7 @@ int main(int argc, char *argv[]) {
         }
 
         else if (strcmp(client_input, "exit\n") == 0) {
+            has_error = 1;
             client_msg.type = 7;
             break;
         }

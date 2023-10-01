@@ -1,4 +1,4 @@
-#include "common.c"
+#include "common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,8 +30,6 @@ int readMatrix(const char *filename, int matrix[ROWS][COLS]) {
 
     fclose(file);
     return 1; // Indica sucesso
-
-    // readMatrix(arquivo, matriz);
 }
 
 void revealCell(int m_original[ROWS][COLS], int m_cliente[ROWS][COLS], int x, int y) {
@@ -122,126 +120,129 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    struct sockaddr_in6 client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    int client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len);
-    if (client_socket == -1) {
-        perror("Erro ao aceitar conexão do cliente");
-        exit(1);
-    }
-
-    char client_ip[INET6_ADDRSTRLEN];
-    inet_ntop(AF_INET6, &(client_addr.sin6_addr), client_ip, INET6_ADDRSTRLEN);
-    printf("client connected\n");
-
-    struct Action client_msg;
-    struct Action server_resp;
-    int reveal_count = 0;
-    while (1) {
-        ssize_t bytes_received = recv(client_socket, &client_msg, sizeof(client_msg), 0);
-
-        if (bytes_received == -1) {
-            perror("Erro ao receber mensagem do cliente");
+    while(1) {
+        struct sockaddr_in6 client_addr;
+        socklen_t client_len = sizeof(client_addr);
+        int client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len);
+        if (client_socket == -1) {
+            perror("Erro ao aceitar conexão do cliente");
             exit(1);
         }
 
-        if (bytes_received == 0) {
-            printf("client disconnected\n");
-            break;
-        }
+        char client_ip[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &(client_addr.sin6_addr), client_ip, INET6_ADDRSTRLEN);
+        printf("client connected\n");
 
-        // start
-        else if (client_msg.type == 0) {
-            server_resp.type = 3;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    server_resp.board[i][j] = client_matrix[i][j];
-                }
+        struct Action client_msg;
+        struct Action server_resp;
+        int reveal_count = 0;
+        while (1) {
+            ssize_t bytes_received = recv(client_socket, &client_msg, sizeof(client_msg), 0);
+        
+            if (bytes_received == -1) {
+                perror("Erro ao receber mensagem do cliente");
+                exit(1);
             }
-        }
 
-        // reveal
-        else if (client_msg.type == 1) {
-            reveal_count++;
-            int x = client_msg.coordinates[0];
-            int y = client_msg.coordinates[1];
-            if (base_matrix[x][y] == -1) {
-                server_resp.type = 8;
-                for (int i=0; i<ROWS; i++) {
-                    for (int j=0; j<COLS; j++) {
-                        server_resp.board[i][j] = base_matrix[i][j];
-                    }
-                }
+            if (bytes_received == 0) {
+                printf("client disconnected\n");
+                close(client_socket);
+                break;
             }
-            else if (reveal_count == 13) {
-                server_resp.type = 6;
-                for (int i=0; i<ROWS; i++) {
-                    for (int j=0; j<COLS; j++) {
-                        server_resp.board[i][j] = base_matrix[i][j];
-                    }
-                }
-            }
-            else {
-                revealCell(base_matrix, client_matrix, x, y);
+
+            // start
+            if (client_msg.type == 0) {
+                reset(client_matrix);
                 server_resp.type = 3;
-                for (int i = 0; i<ROWS; i++) {
-                    for (int j = 0; j<COLS; j++) {
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
                         server_resp.board[i][j] = client_matrix[i][j];
                     }
                 }
             }
-        }
 
-        // flag
-        else if (client_msg.type == 2) {
-            addFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
-            server_resp.type = 3;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    server_resp.board[i][j] = client_matrix[i][j];
+            // reveal
+            else if (client_msg.type == 1) {
+                reveal_count++;
+                int x = client_msg.coordinates[0];
+                int y = client_msg.coordinates[1];
+                if (base_matrix[x][y] == -1) {
+                    server_resp.type = 8;
+                    for (int i=0; i<ROWS; i++) {
+                        for (int j=0; j<COLS; j++) {
+                            server_resp.board[i][j] = base_matrix[i][j];
+                        }
+                    }
+                }
+                else if (reveal_count == 13) {
+                    server_resp.type = 6;
+                    for (int i=0; i<ROWS; i++) {
+                        for (int j=0; j<COLS; j++) {
+                            server_resp.board[i][j] = base_matrix[i][j];
+                        }
+                    }
+                }
+                else {
+                    revealCell(base_matrix, client_matrix, x, y);
+                    server_resp.type = 3;
+                    for (int i = 0; i<ROWS; i++) {
+                        for (int j = 0; j<COLS; j++) {
+                            server_resp.board[i][j] = client_matrix[i][j];
+                        }
+                    }
                 }
             }
-        }
 
-        // remove_flag
-        else if (client_msg.type == 4) {
-            removeFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
-            server_resp.type = 3;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    server_resp.board[i][j] = client_matrix[i][j];
+            // flag
+            else if (client_msg.type == 2) {
+                addFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+                server_resp.type = 3;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        server_resp.board[i][j] = client_matrix[i][j];
+                    }
                 }
             }
-        }
 
-        // reset
-        else if (client_msg.type == 5) {
-            reset(client_matrix);
-            server_resp.type = 3;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
-                    server_resp.board[i][j] = client_matrix[i][j];
+            // remove_flag
+            else if (client_msg.type == 4) {
+                removeFlag(client_matrix, client_msg.coordinates[0], client_msg.coordinates[1]);
+                server_resp.type = 3;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        server_resp.board[i][j] = client_matrix[i][j];
+                    }
                 }
             }
-        }
 
-        // exit
-        else if (client_msg.type == 7) {
-            printf("client disconnected\n");
-            break;
-        }
+            // reset
+            else if (client_msg.type == 5) {
+                reset(client_matrix);
+                server_resp.type = 3;
+                for (int i = 0; i < 4; i++) {
+                    for (int j = 0; j < 4; j++) {
+                        server_resp.board[i][j] = client_matrix[i][j];
+                    }
+                }
+                printf("starting new game\n");
+            }
 
-        else {
-            printf("comando desconhecido\n");
-        }
+            // exit
+            else if (client_msg.type == 7) {
+                reset(client_matrix);
+                printf("client disconnected\n");
+                close(client_socket);
+                break;
+            }
 
-        if (send(client_socket, &server_resp, sizeof(struct Action), 0) == -1) {
-            perror("Erro ao enviar mensagem do servidor para o cliente");
-            exit(1);
-        }        
+            if (send(client_socket, &server_resp, sizeof(struct Action), 0) == -1) {
+                perror("Erro ao enviar mensagem do servidor para o cliente");
+                exit(1);
+            }
+        }
     }
 
-    close(client_socket);
+    //close(client_socket);
     close(server_socket);
 
     return 0;
